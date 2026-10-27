@@ -9,146 +9,58 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
-
-    <!-- LOBBY -->
-    <section id="lobby" class="screen">
-      <div class="lobby-card">
-        <div class="logo-pick">⛏️</div>
-        <p class="eyebrow">WELCOME TO</p>
-        <h1>MINE<span>VOX</span></h1>
-        <p class="tagline">Mine. Upgrade. Discover.</p>
-
-        <div class="setup">
-          <label>
-            JMÉNO HRÁČE
-            <input id="playerName" maxlength="16" placeholder="Miner" autocomplete="off">
-          </label>
-
-          <label>
-            VZHLED KRUMPKÁČE
-            <select id="pickaxeStyle">
-              <option value="wood">🪵 Dřevěný</option>
-              <option value="stone">🪨 Kamenný</option>
-              <option value="iron">🔩 Železný</option>
-              <option value="gold">🟨 Zlatý</option>
-            </select>
-          </label>
-
-          <button id="startBtn" class="primary-btn big">VSTOUPIT DO DOLU ⛏️</button>
-        </div>
-
-        <p class="saved-note">Postup se ukládá automaticky v tomto prohlížeči.</p>
+<div id="app">
+  <section id="lobby" class="screen">
+    <div class="lobby-card">
+      <div class="logo-pick">⛏️</div><p class="eyebrow">WELCOME TO</p>
+      <h1>MINE<span>VOX</span></h1><p class="tagline">Mine. Upgrade. Discover.</p>
+      <div class="setup">
+        <label>JMÉNO HRÁČE<input id="playerName" maxlength="16" placeholder="Miner" autocomplete="off"></label>
+        <label>VZHLED KRUMPKÁČE<select id="pickaxeStyle"><option value="wood">🪵 Dřevěný</option><option value="stone">🪨 Kamenný</option><option value="iron">🔩 Železný</option><option value="gold">🟨 Zlatý</option></select></label>
+        <button id="startBtn" class="primary-btn big">VSTOUPIT DO DOLU ⛏️</button>
       </div>
-    </section>
+      <p class="saved-note">Postup se ukládá automaticky v tomto prohlížeči.</p>
+    </div>
+  </section>
 
-    <!-- GAME -->
-    <section id="game" class="screen hidden">
-      <header class="topbar">
-        <div class="brand">
-          <div class="brand-icon">⛏️</div>
-          <div>
-            <h1>MINEVOX</h1>
-            <span id="playerLabel">Miner</span>
-          </div>
-        </div>
+  <section id="game" class="screen hidden">
+    <header class="topbar">
+      <div class="brand"><div class="brand-icon">⛏️</div><div><h1>MINEVOX</h1><span id="playerLabel">Miner</span></div></div>
+      <div class="top-actions"><button id="updateLogBtn" class="secondary-btn">📜 UPDATE LOG</button><div class="stats"><div class="stat"><span class="stat-label">MINCE</span><strong id="coins">100</strong><span>💰</span></div><div class="stat"><span class="stat-label">VYTĚŽENO</span><strong id="mined">0</strong><span>⛏️</span></div></div></div>
+    </header>
 
-        <div class="stats">
-          <div class="stat">
-            <span class="stat-label">MINCE</span>
-            <strong id="coins">100</strong>
-            <span>💰</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">VYTĚŽENO</span>
-            <strong id="mined">0</strong>
-            <span>⛏️</span>
-          </div>
-        </div>
-      </header>
+    <main class="game-layout">
+      <section class="mine-panel">
+        <div class="section-head"><div><p class="eyebrow">STONE MINE</p><h2>Objevuj důl</h2></div><div class="level-badge">LEVEL <span id="level">1</span></div></div>
+        <div class="grid-wrap"><div id="mineGrid" class="mine-grid" aria-label="Těžební mřížka"></div></div>
+        <div class="mine-tip"><span>💡</span><p>❓ znamená neodhalený blok. 🔒 bloky se odemykají po těžbě. Poklady a vzácné rudy jsou náhodné.</p></div>
+      </section>
 
-      <main class="game-layout">
-        <section class="mine-panel">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow" id="mineName">STONE MINE</p>
-              <h2>Objevuj důl</h2>
-            </div>
-            <div class="level-badge">LEVEL <span id="level">1</span></div>
-          </div>
-
-          <div class="grid-wrap">
-            <div id="mineGrid" class="mine-grid" aria-label="Těžební mřížka"></div>
-          </div>
-
-          <div class="mine-tip">
-            <span>💡</span>
-            <p>Neznámé bloky se odhalují postupně. Těž sousední bloky a objevuj hlubší části dolu.</p>
-          </div>
+      <aside class="side-panel">
+        <section class="card">
+          <div class="card-title"><span>⛏️</span><div><p class="eyebrow">NÁSTROJ</p><h3 id="pickaxeName">Dřevěný krumpáč</h3></div></div>
+          <div class="pickaxe-preview" id="pickaxePreview">⛏️</div>
+          <div class="durability-head"><span>Výdrž</span><strong id="durability">100%</strong></div>
+          <div class="durability-bar"><div id="durabilityFill"></div></div>
+          <div class="durability-text" id="durabilityText">50 / 50</div>
+          <div class="upgrade-info"><div><span>Poškození</span><strong id="damage">1</strong></div><div><span>Další úroveň</span><strong id="nextDamage">2</strong></div></div>
+          <div class="tool-buttons"><button id="repairBtn" class="secondary-btn">OPRAVIT 100 💰</button><button id="upgradeBtn" class="primary-btn">VYLEPŠIT 50 💰</button></div>
         </section>
 
-        <aside class="side-panel">
-          <section class="card">
-            <div class="card-title">
-              <span>⛏️</span>
-              <div>
-                <p class="eyebrow">NÁSTROJ</p>
-                <h3 id="pickaxeName">Dřevěný krumpáč</h3>
-              </div>
-            </div>
+        <section class="card combo-card"><div class="card-title"><span>💥</span><div><p class="eyebrow">COMBO</p><h3 id="combo">×0</h3></div><strong id="comboBonus">+0 % coins</strong></div><p class="muted">Těž rychle za sebou a získej bonus k mincím.</p></section>
 
-            <div class="pickaxe-preview" id="pickaxePreview">⛏️</div>
+        <section class="card"><div class="card-title"><span>🧱</span><div><p class="eyebrow">SBÍRKA</p><h3>Materiály</h3></div></div><div id="materials" class="materials"></div></section>
 
-            <div class="upgrade-info">
-              <div>
-                <span>Poškození</span>
-                <strong id="damage">1</strong>
-              </div>
-              <div>
-                <span>Další úroveň</span>
-                <strong id="nextDamage">2</strong>
-              </div>
-            </div>
+        <section class="card"><div class="card-title"><span>🏆</span><div><p class="eyebrow">VÝZVY</p><h3>Achievementy</h3></div></div><div id="achievements" class="achievements"></div></section>
 
-            <button id="upgradeBtn" class="primary-btn">
-              VYLEPŠIT <span id="upgradeCost">50</span> 💰
-            </button>
-          </section>
+        <section class="card progress-card"><div class="card-title"><span>🗺️</span><div><p class="eyebrow">OBJEVOVÁNÍ</p><h3>Důl</h3></div></div><div class="progress-text"><span>Odhalené bloky</span><strong><span id="revealedValue">0</span> / 25</strong></div><div class="progress-bar"><div id="progressFill"></div></div><p id="unlockMessage" class="muted">Těž bloky a odhaluj další části.</p></div>
+      </aside>
+    </main>
+  </section>
+</div>
 
-          <section class="card">
-            <div class="card-title">
-              <span>🧱</span>
-              <div>
-                <p class="eyebrow">SBÍRKA</p>
-                <h3>Materiály</h3>
-              </div>
-            </div>
-            <div id="materials" class="materials"></div>
-          </section>
-
-          <section class="card progress-card">
-            <div class="card-title">
-              <span>🗺️</span>
-              <div>
-                <p class="eyebrow">OBJEVOVÁNÍ</p>
-                <h3>Důl</h3>
-              </div>
-            </div>
-            <div class="progress-text">
-              <span>Odhalené bloky</span>
-              <strong><span id="revealedValue">0</span> / 25</strong>
-            </div>
-            <div class="progress-bar">
-              <div id="progressFill"></div>
-            </div>
-            <p id="unlockMessage" class="muted">Vytěžuj bloky a odhaluj další části.</p>
-          </section>
-        </aside>
-      </main>
-    </section>
-  </div>
-
-  <div id="toast" class="toast" role="status"></div>
-  <script src="script.js"></script>
+<div id="updateLogModal" class="modal hidden"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">MINEVOX</p><h2>📜 UPDATE LOG</h2></div><button id="closeUpdateLogBtn" class="close-btn">×</button></div><div class="update-entry"><span class="update-badge">UPDATE 2</span><h3>⛏️ ŽIVÝ DŮL</h3><ul><li>🪓 Krumpáče mají výdrž a mohou se rozbít.</li><li>🔧 Krumpáče lze opravovat za mince.</li><li>❓ Bloky se postupně odhalují.</li><li>🔒 Po vytěžení 20 bloků se odemykají nové části.</li><li>💎 Přidány Měď, Smaragd a Lapis.</li><li>🎁 Přidány náhodné Treasure Blocky.</li><li>💥 Přidáno COMBO s bonusem k mincím.</li><li>🪙 První objevení rudy dává bonus.</li><li>📖 Přidána Collection materiálů.</li><li>🏆 Přidány achievementy.</li></ul></div><p class="modal-footer">Další updaty budou postupně rozšiřovat svět MINEVOX.</p></div></div>
+<div id="toast" class="toast" role="status"></div>
+<script src="script.js"></script>
 </body>
 </html>

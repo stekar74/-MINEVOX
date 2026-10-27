@@ -1,6 +1,6 @@
 # MINEVOX
 
-Druhá verze jednoduché browserové mining hry.
+MINEVOX je jednoduchá browserová mining hra. Tato verze obsahuje **UPDATE 2 – Živý důl**.
 
 ## Struktura
 
@@ -16,55 +16,27 @@ minevox/
 
 ## Spuštění
 
-Otevři `index.html` v moderním webovém prohlížeči.
+Otevři `index.html` v moderním webovém prohlížeči. Není potřeba server ani instalace balíčků.
 
-Není potřeba server ani instalace balíčků.
+## UPDATE 2 – Živý důl
 
-## Co je nové ve V2
+- 🪓 krumpáče mají výdrž a mohou se rozbít
+- 🔧 krumpáče lze opravovat za mince
+- ❓ bloky se postupně odhalují
+- 🔒 zamčená políčka se odemykají postupně, po 20 vytěžených blocích
+- 💎 přidány nové rudy: Měď, Lapis, Smaragd a Rubín
+- 🎁 přidány náhodné Treasure Blocky
+- 💥 přidáno COMBO s bonusem k mincím
+- 🪙 první objevení každé rudy dává bonus
+- 📖 přidána Collection materiálů
+- 🏆 přidány achievementy
+- 📜 přidán trvalý Update Log, který lze kdykoli otevřít
+- 💾 automatické ukládání pokračuje přes `localStorage`
 
-### Lobby
+## Hlavní herní smyčka
 
-Po spuštění hry se hráč nejdříve dostane do lobby.
+**Klikni → vytěž → opotřebuj krumpáč → odhal okolí → najdi rudu nebo poklad → vydělej mince → oprav nebo vylepši krumpáč → odemykej další část dolu.**
 
-V lobby si může:
-- nastavit jméno hráče
-- vybrat vzhled krumpáče
-- vstoupit do dolu
+## Poznámka k updatu
 
-### Postupné odhalování mapy
-
-Celá mapa už není okamžitě odhalená.
-
-Na začátku je odhalených pouze několik prostředních políček.
-
-Když hráč vytěží blok, odhalí se jeho sousední políčka.
-
-Díky tomu se důl postupně rozšiřuje a hráč nevidí dopředu, co ho čeká.
-
-### Těžení
-
-- 5×5 grid
-- HP bloků
-- Stone, Coal, Gold, Diamond a Ruby
-- mince za vytěžení
-- náhodné nové bloky
-- upgrady krumpáče
-- sbírka materiálů
-- level
-
-### Ukládání
-
-Postup se automaticky ukládá do `localStorage`.
-
-## Další plánované updaty
-
-1. další doly
-2. více typů bloků
-3. větší mapy
-4. boss bloky
-5. pets
-6. rebirth
-7. daily rewards
-8. leaderboard
-9. účty hráčů
-10. online multiplayer
+Hra zůstává čistě klikací. Není zde postava, WASD ani pohyb po mapě.
