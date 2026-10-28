@@ -1,405 +1,68 @@
 const BLOCKS = {
-  stone:   { name: "Kámen", icon: "🪨", className: "stone", maxHp: 5, reward: 5, chance: 0.49 },
-  coal:    { name: "Uhlí", icon: "⬛", className: "coal", maxHp: 15, reward: 20, chance: 0.24 },
-  copper:  { name: "Měď", icon: "🟠", className: "copper", maxHp: 25, reward: 35, chance: 0.13 },
-  gold:    { name: "Zlato", icon: "🟨", className: "gold", maxHp: 45, reward: 75, chance: 0.075 },
-  lapis:   { name: "Lapis", icon: "🔵", className: "lapis", maxHp: 55, reward: 120, chance: 0.035 },
-  diamond: { name: "Diamant", icon: "💎", className: "diamond", maxHp: 90, reward: 250, chance: 0.02 },
-  emerald: { name: "Smaragd", icon: "🟢", className: "emerald", maxHp: 130, reward: 500, chance: 0.007 },
-  ruby:    { name: "Rubín", icon: "♦", className: "ruby", maxHp: 180, reward: 750, chance: 0.003 }
+  stone:   { name: "Kámen", icon: "🪨", className: "stone", maxHp: 5, reward: 5, sell: 2, xp: 2, chance: 0.57, rare: false },
+  coal:    { name: "Uhlí", icon: "⬛", className: "coal", maxHp: 15, reward: 20, sell: 8, xp: 6, chance: 0.24, rare: false },
+  copper:  { name: "Měď", icon: "🟠", className: "copper", maxHp: 22, reward: 30, sell: 12, xp: 8, chance: 0.09, rare: false },
+  gold:    { name: "Zlato", icon: "🟨", className: "gold", maxHp: 30, reward: 75, sell: 35, xp: 14, chance: 0.06, rare: true },
+  diamond: { name: "Diamant", icon: "💎", className: "diamond", maxHp: 75, reward: 250, sell: 200, xp: 35, chance: 0.02, rare: true },
+  emerald: { name: "Smaragd", icon: "🟢", className: "emerald", maxHp: 95, reward: 350, sell: 280, xp: 45, chance: 0.012, rare: true },
+  lapis:   { name: "Lapis", icon: "🔵", className: "lapis", maxHp: 70, reward: 180, sell: 130, xp: 28, chance: 0.006, rare: true },
+  ruby:    { name: "Rubín", icon: "🔴", className: "ruby", maxHp: 150, reward: 750, sell: 600, xp: 70, chance: 0.002, rare: true }
 };
-
-const PICKAXES = [
-  { name: "Dřevěný krumpáč", damage: 1, cost: 50, durability: 50, icon: "⛏️" },
-  { name: "Kamenný krumpáč", damage: 2, cost: 250, durability: 100, icon: "⛏️" },
-  { name: "Železný krumpáč", damage: 5, cost: 1000, durability: 175, icon: "⚒️" },
-  { name: "Zlatý krumpáč", damage: 10, cost: 5000, durability: 250, icon: "✨" },
-  { name: "Diamantový krumpáč", damage: 25, cost: 25000, durability: 400, icon: "💎" }
+const PICKAXES = {
+  wood:{name:"Dřevěný krumpáč",damage:1,durability:50,repairCost:25,upgradeCost:50,icon:"⛏️"},
+  stone:{name:"Kamenný krumpáč",damage:2,durability:100,repairCost:75,upgradeCost:250,icon:"⛏️"},
+  iron:{name:"Železný krumpáč",damage:5,durability:175,repairCost:175,upgradeCost:1000,icon:"⚒️"},
+  gold:{name:"Zlatý krumpáč",damage:10,durability:250,repairCost:300,upgradeCost:5000,icon:"✨"},
+  diamond:{name:"Diamantový krumpáč",damage:25,durability:400,repairCost:600,upgradeCost:null,icon:"💎"}
+};
+const SAVE_KEY="minevoxSaveV3", OLD_SAVE_KEY="minevoxSaveV2", PICKAXE_KEYS=Object.keys(PICKAXES), SIZES=[5,7,9], BASE_CAP=25;
+let state={playerName:"Miner",pickaxeStyle:"wood",coins:100,mined:0,pickaxe:"wood",durability:50,mineSize:5,blocks:[],started:false,xp:0,inventory:{},capacity:BASE_CAP,collection:[],achievements:[],sellBonus:0,xpBonus:0};
+const $=id=>document.getElementById(id), lobby=$("lobby"),game=$("game"),grid=$("mineGrid"),toast=$("toast");
+function emptyBlock(locked=true){return{type:null,hp:0,maxHp:0,revealed:false,locked};}
+function createBlock(type){const d=BLOCKS[type];return{type,hp:d.maxHp,maxHp:d.maxHp,revealed:false,locked:false};}
+function randomBlock(){let r=Math.random(),t=0;for(const [id,d] of Object.entries(BLOCKS)){t+=d.chance;if(r<=t)return createBlock(id);}return createBlock("stone");}
+function centerStartIndex(size){return Math.floor(size/2)*size+Math.floor(size/2)}
+function createMine(size=5){const b=Array.from({length:size*size},()=>emptyBlock(true));b[centerStartIndex(size)]=randomBlock();b[centerStartIndex(size)].revealed=true;return b}
+function getGridIndex(r,c,size=state.mineSize){return r*size+c}
+function inBounds(r,c,size=state.mineSize){return r>=0&&r<size&&c>=0&&c<size}
+function getNeighbors(i,size=state.mineSize){const r=Math.floor(i/size),c=i%size;return[[r-1,c],[r+1,c],[r,c-1],[r,c+1]].filter(([a,b])=>inBounds(a,b,size)).map(([a,b])=>getGridIndex(a,b,size))}
+function revealAround(i){getNeighbors(i).forEach(n=>{const b=state.blocks[n];if(b&&!b.locked&&!b.revealed)b.revealed=true;});}
+function targetSize(){return state.mined>=60?9:state.mined>=20?7:5}
+function unlockAreaIfNeeded(){const target=targetSize();if(target===state.mineSize)return false;const old=state.mineSize,oldBlocks=state.blocks;state.mineSize=target;state.blocks=Array.from({length:target*target},()=>emptyBlock(true));const off=Math.floor((target-old)/2);for(let r=0;r<old;r++)for(let c=0;c<old;c++){const nb=(r+off)*target+c+off;state.blocks[nb]=oldBlocks[r*old+c];state.blocks[nb].locked=false;}for(let r=0;r<target;r++)for(let c=0;c<target;c++){const i=getGridIndex(r,c,target);if(state.blocks[i].type===null&&Math.abs(r-Math.floor(target/2))<=Math.floor(old/2)+1&&Math.abs(c-Math.floor(target/2))<=Math.floor(old/2)+1){state.blocks[i]=randomBlock();}}showToast(`🗺️ Důl se rozšířil na ${target} × ${target}!`);return true}
+function normalizeLoadedState(p){state={...state,...p};state.pickaxeStyle=PICKAXES[state.pickaxeStyle]?state.pickaxeStyle:"wood";state.pickaxe=PICKAXES[state.pickaxe]?state.pickaxe:state.pickaxeStyle;state.mineSize=SIZES.includes(+state.mineSize)?+state.mineSize:5;state.coins=Math.max(0,+state.coins||0);state.mined=Math.max(0,+state.mined||0);state.xp=Math.max(0,+state.xp||0);state.capacity=Math.max(BASE_CAP,+state.capacity||BASE_CAP);state.sellBonus=Math.max(0,+state.sellBonus||0);state.xpBonus=Math.max(0,+state.xpBonus||0);state.inventory=state.inventory&&typeof state.inventory==="object"?state.inventory:{};state.collection=Array.isArray(state.collection)?state.collection:[];state.achievements=Array.isArray(state.achievements)?state.achievements:[];const max=PICKAXES[state.pickaxe].durability;state.durability=Math.min(max,Math.max(0,+state.durability||max));if(!Array.isArray(state.blocks)||state.blocks.length!==state.mineSize*state.mineSize){state.mineSize=targetSize();state.blocks=createMine(state.mineSize);}state.blocks=state.blocks.map(b=>({type:BLOCKS[b?.type]?b.type:null,hp:+b?.hp||0,maxHp:+b?.maxHp||0,revealed:!!b?.revealed,locked:!!b?.locked}));if(!state.blocks.some(b=>b.revealed&&b.type)){const i=centerStartIndex(state.mineSize);state.blocks[i]=randomBlock();state.blocks[i].revealed=true;state.blocks[i].locked=false;}}
+function loadGame(){let saved=localStorage.getItem(SAVE_KEY)||localStorage.getItem(OLD_SAVE_KEY);if(saved){try{normalizeLoadedState(JSON.parse(saved))}catch{state.blocks=createMine(5)}}else state.blocks=createMine(5);state.started=false;}
+function saveGame(){localStorage.setItem(SAVE_KEY,JSON.stringify({...state,started:false}))}
+function levelInfo(){let level=1,need=100,total=state.xp;while(total>=need){total-=need;level++;need=Math.floor(need*1.25)}return{level,into:total,need}}
+function inventoryUsed(){return Object.values(state.inventory).reduce((a,b)=>a+Math.max(0,+b||0),0)}
+function addItem(type,amount=1){const used=inventoryUsed(),space=Math.max(0,state.capacity-used),take=Math.min(space,amount);if(take>0){state.inventory[type]=(state.inventory[type]||0)+take;state.collection.includes(type)||state.collection.push(type);}return take}
+function awardAchievement(id){if(!state.achievements.includes(id)){state.achievements.push(id);return true}return false}
+const ACH=[
+{id:"first",name:"První krok",desc:"Vytěž první blok.",test:()=>state.mined>=1,reward:50},
+{id:"100",name:"Velký horník",desc:"Vytěž 100 bloků.",test:()=>state.mined>=100,reward:250},
+{id:"diamond",name:"Lovec diamantů",desc:"Najdi diamant.",test:()=>state.collection.includes("diamond"),reward:150},
+{id:"emerald",name:"Emerald Hunter",desc:"Najdi smaragd.",test:()=>state.collection.includes("emerald"),reward:200},
+{id:"rich",name:"Boháč",desc:"Měj 10 000 mincí.",test:()=>state.coins>=10000,reward:500},
+{id:"bigmine",name:"Průzkumník",desc:"Odemkni důl 9 × 9.",test:()=>state.mineSize>=9,reward:500}
 ];
-
-const SIZE = 25;
-const SAVE_KEY = "minevoxSaveV2";
-const LOCK_EVERY = 20;
-const TREASURE_CHANCE = 0.035;
-const COMBO_TIMEOUT = 2500;
-
-let state = {
-  started: false,
-  playerName: "Miner",
-  pickaxeStyle: "wood",
-  coins: 100,
-  mined: 0,
-  pickaxe: 0,
-  durability: 50,
-  materials: { stone: 0, coal: 0, copper: 0, gold: 0, lapis: 0, diamond: 0, emerald: 0, ruby: 0 },
-  discovered: {},
-  achievements: {},
-  blocks: [],
-  combo: 0,
-  comboUntil: 0,
-  unlockedCount: 5,
-  updateLogSeen: false
-};
-
-const lobby = document.getElementById("lobby");
-const game = document.getElementById("game");
-const startBtn = document.getElementById("startBtn");
-const playerNameInput = document.getElementById("playerName");
-const pickaxeStyleInput = document.getElementById("pickaxeStyle");
-const grid = document.getElementById("mineGrid");
-const coinsEl = document.getElementById("coins");
-const minedEl = document.getElementById("mined");
-const levelEl = document.getElementById("level");
-const damageEl = document.getElementById("damage");
-const nextDamageEl = document.getElementById("nextDamage");
-const pickaxeNameEl = document.getElementById("pickaxeName");
-const pickaxePreviewEl = document.getElementById("pickaxePreview");
-const upgradeBtn = document.getElementById("upgradeBtn");
-const repairBtn = document.getElementById("repairBtn");
-const durabilityEl = document.getElementById("durability");
-const durabilityFillEl = document.getElementById("durabilityFill");
-const durabilityTextEl = document.getElementById("durabilityText");
-const materialsEl = document.getElementById("materials");
-const revealedValueEl = document.getElementById("revealedValue");
-const progressFillEl = document.getElementById("progressFill");
-const unlockMessageEl = document.getElementById("unlockMessage");
-const comboEl = document.getElementById("combo");
-const comboBonusEl = document.getElementById("comboBonus");
-const toastEl = document.getElementById("toast");
-const updateLogBtn = document.getElementById("updateLogBtn");
-const updateLogModal = document.getElementById("updateLogModal");
-const closeUpdateLogBtn = document.getElementById("closeUpdateLogBtn");
-const achievementsEl = document.getElementById("achievements");
-
-function createBlock(type) {
-  const data = BLOCKS[type];
-  return { type, hp: data.maxHp, maxHp: data.maxHp, revealed: false, locked: false, treasure: false };
-}
-
-function randomBlock() {
-  if (Math.random() < TREASURE_CHANCE) {
-    return { type: "treasure", hp: 20, maxHp: 20, revealed: false, locked: false, treasure: true };
-  }
-  const roll = Math.random();
-  let total = 0;
-  for (const [id, data] of Object.entries(BLOCKS)) {
-    total += data.chance;
-    if (roll <= total) return createBlock(id);
-  }
-  return createBlock("stone");
-}
-
-function createNewMine() {
-  const blocks = Array.from({ length: SIZE }, () => randomBlock());
-  const startingIndexes = [7, 11, 12, 13, 17];
-  startingIndexes.forEach(index => {
-    blocks[index].revealed = true;
-    blocks[index].locked = false;
-  });
-  return blocks;
-}
-
-function normalizeState(parsed) {
-  state = {
-    ...state,
-    ...parsed,
-    materials: { ...state.materials, ...(parsed.materials || {}) },
-    discovered: { ...(parsed.discovered || {}) },
-    achievements: { ...(parsed.achievements || {}) },
-    blocks: Array.isArray(parsed.blocks) && parsed.blocks.length === SIZE ? parsed.blocks : createNewMine()
-  };
-  const current = PICKAXES[state.pickaxe] || PICKAXES[0];
-  if (!Number.isFinite(state.durability)) state.durability = current.durability;
-  state.unlockedCount = Math.max(5, Math.min(SIZE, Number(state.unlockedCount) || 5));
-  state.blocks.forEach((b, i) => {
-    if (typeof b.revealed !== "boolean") b.revealed = [7,11,12,13,17].includes(i);
-    if (typeof b.locked !== "boolean") b.locked = !b.revealed && i >= state.unlockedCount;
-  });
-}
-
-function loadGame() {
-  const saved = localStorage.getItem(SAVE_KEY);
-  if (!saved) {
-    state.blocks = createNewMine();
-    return;
-  }
-  try { normalizeState(JSON.parse(saved)); }
-  catch { state.blocks = createNewMine(); }
-}
-
-function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
-
-function neighborsOf(index) {
-  const row = Math.floor(index / 5);
-  const col = index % 5;
-  return [[row-1,col],[row+1,col],[row,col-1],[row,col+1]]
-    .filter(([r,c]) => r >= 0 && r < 5 && c >= 0 && c < 5)
-    .map(([r,c]) => r * 5 + c);
-}
-
-function revealNeighbors(index) {
-  neighborsOf(index).forEach(neighborIndex => {
-    const block = state.blocks[neighborIndex];
-    if (!block.locked) block.revealed = true;
-  });
-}
-
-function unlockMoreBlocks() {
-  if (state.mined <= 0 || state.mined % LOCK_EVERY !== 0) return false;
-  const candidates = state.blocks
-    .map((b, i) => ({ b, i }))
-    .filter(x => x.b.locked);
-  const amount = Math.min(5, candidates.length);
-  candidates.slice(0, amount).forEach(({ b }) => { b.locked = false; b.revealed = false; });
-  state.unlockedCount = Math.min(SIZE, state.unlockedCount + amount);
-  showToast(`🔓 Odemčeno ${amount} nových políček!`);
-  return true;
-}
-
-function renderGrid() {
-  grid.innerHTML = "";
-  state.blocks.forEach((block, index) => {
-    if (block.locked) {
-      const locked = document.createElement("div");
-      locked.className = "block locked-block";
-      locked.innerHTML = `<span>🔒</span><small>UZAMČENO</small>`;
-      grid.appendChild(locked);
-      return;
-    }
-    if (!block.revealed) {
-      const hidden = document.createElement("div");
-      hidden.className = "block hidden-block";
-      hidden.innerHTML = `<span class="fog"></span><span class="question">?</span>`;
-      grid.appendChild(hidden);
-      return;
-    }
-    const button = document.createElement("button");
-    button.className = `block ${block.hp <= 0 ? "empty" : block.treasure ? "treasure" : BLOCKS[block.type].className}`;
-    button.type = "button";
-    if (block.hp <= 0) { grid.appendChild(button); return; }
-    if (block.treasure) {
-      button.setAttribute("aria-label", "Těžit poklad");
-      button.innerHTML = `<span class="label">POKLAD</span><span class="treasure-icon">🎁</span><span class="hp"><i style="width:${block.hp / block.maxHp * 100}%"></i></span>`;
-    } else {
-      const data = BLOCKS[block.type];
-      button.setAttribute("aria-label", `Těžit ${data.name}`);
-      button.innerHTML = `<span class="label">${data.name}</span><span class="ore"></span><span class="hp"><i style="width:${block.hp / block.maxHp * 100}%"></i></span>`;
-    }
-    button.addEventListener("click", () => mine(index));
-    grid.appendChild(button);
-  });
-}
-
-function getDamage() { return PICKAXES[state.pickaxe].damage; }
-function getComboBonus() { return Math.min(0.5, Math.max(0, state.combo - 1) * 0.05); }
-
-function mine(index) {
-  const block = state.blocks[index];
-  if (!block || block.locked || !block.revealed || block.hp <= 0) return;
-  if (state.durability <= 0) {
-    showToast("🪓 Krumpáč je rozbitý. Oprav ho!");
-    return;
-  }
-
-  block.hp -= getDamage();
-  state.durability = Math.max(0, state.durability - 1);
-
-  const button = grid.children[index];
-  if (button) {
-    const hpBar = button.querySelector(".hp > i");
-    if (hpBar) hpBar.style.width = `${Math.max(0, block.hp / block.maxHp * 100)}%`;
-  }
-
-  if (block.hp <= 0) {
-    state.mined += 1;
-    state.combo = Date.now() <= state.comboUntil ? state.combo + 1 : 1;
-    state.comboUntil = Date.now() + COMBO_TIMEOUT;
-
-    if (block.treasure) {
-      const reward = 250 + Math.floor(Math.random() * 251);
-      state.coins += reward;
-      state.durability = Math.min(PICKAXES[state.pickaxe].durability, state.durability + 10);
-      showToast(`🎁 Poklad! +${reward} 💰 a +10 durability`);
-    } else {
-      const data = BLOCKS[block.type];
-      const bonus = Math.round(data.reward * getComboBonus());
-      state.coins += data.reward + bonus;
-      state.materials[block.type] = (state.materials[block.type] || 0) + 1;
-      const first = !state.discovered[block.type];
-      state.discovered[block.type] = true;
-      if (first) {
-        const firstBonus = data.reward >= 250 ? 250 : 50;
-        state.coins += firstBonus;
-        showToast(`✨ ${data.name.toUpperCase()} OBJEVEN! +${firstBonus} 💰`);
-      } else {
-        showToast(`+${data.reward + bonus} 💰 ${data.icon} ${data.name}${bonus ? `  COMBO +${bonus}` : ""}`);
-      }
-      checkAchievements();
-    }
-
-    revealNeighbors(index);
-    state.blocks[index] = randomBlock();
-    state.blocks[index].revealed = true;
-    state.blocks[index].locked = false;
-    unlockMoreBlocks();
-    renderGrid();
-    updateUI();
-    saveGame();
-  } else {
-    updateUI();
-    saveGame();
-  }
-}
-
-function repairPickaxe() {
-  const max = PICKAXES[state.pickaxe].durability;
-  const missing = max - state.durability;
-  if (missing <= 0) return;
-  const cost = Math.max(10, Math.ceil(missing * 2));
-  if (state.coins < cost) {
-    showToast(`Potřebuješ ${cost.toLocaleString("cs-CZ")} 💰`);
-    return;
-  }
-  state.coins -= cost;
-  state.durability = max;
-  showToast(`🔧 Krumpáč opraven za ${cost} 💰`);
-  updateUI();
-  saveGame();
-}
-
-function upgradePickaxe() {
-  const next = PICKAXES[state.pickaxe + 1];
-  if (!next) return;
-  if (state.coins < next.cost) {
-    showToast(`Potřebuješ ${next.cost.toLocaleString("cs-CZ")} 💰`);
-    return;
-  }
-  state.coins -= next.cost;
-  state.pickaxe += 1;
-  state.durability = next.durability;
-  showToast(`Nový krumpáč: ${next.name} ⛏️`);
-  updateUI();
-  saveGame();
-}
-
-function checkAchievements() {
-  const list = {
-    first: state.mined >= 1,
-    diamondHunter: !!state.discovered.diamond,
-    emeraldHunter: !!state.discovered.emerald,
-    hundred: state.mined >= 100
-  };
-  Object.entries(list).forEach(([id, done]) => {
-    if (done && !state.achievements[id]) {
-      state.achievements[id] = true;
-      const names = { first: "⛏️ První krumpáč", diamondHunter: "💎 Lovec diamantů", emeraldHunter: "🟢 Emerald Hunter", hundred: "💥 100 bloků" };
-      showToast(`🏆 Achievement: ${names[id]}`);
-    }
-  });
-}
-
-function updateUI() {
-  const pickaxe = PICKAXES[state.pickaxe];
-  const next = PICKAXES[state.pickaxe + 1];
-  const max = pickaxe.durability;
-  const durabilityPct = Math.max(0, Math.min(100, state.durability / max * 100));
-  coinsEl.textContent = state.coins.toLocaleString("cs-CZ");
-  minedEl.textContent = state.mined.toLocaleString("cs-CZ");
-  levelEl.textContent = Math.floor(state.mined / 10) + 1;
-  pickaxeNameEl.textContent = pickaxe.name;
-  pickaxePreviewEl.textContent = pickaxe.icon;
-  damageEl.textContent = pickaxe.damage;
-  durabilityEl.textContent = `${Math.round(durabilityPct)}%`;
-  durabilityTextEl.textContent = `${state.durability} / ${max}`;
-  durabilityFillEl.style.width = `${durabilityPct}%`;
-  repairBtn.disabled = state.durability >= max;
-  const repairCost = Math.max(10, Math.ceil((max - state.durability) * 2));
-  repairBtn.innerHTML = state.durability >= max ? "KRUMPNÁČ JE OPRAVENÝ" : `OPRAVIT ${repairCost.toLocaleString("cs-CZ")} 💰`;
-  if (next) {
-    nextDamageEl.textContent = next.damage;
-    upgradeBtn.disabled = state.coins < next.cost;
-    upgradeBtn.innerHTML = `VYLEPŠIT ${next.cost.toLocaleString("cs-CZ")} 💰`;
-  } else {
-    nextDamageEl.textContent = "MAX";
-    upgradeBtn.textContent = "MAXIMÁLNÍ ÚROVEŇ";
-    upgradeBtn.disabled = true;
-  }
-  comboEl.textContent = `×${state.combo || 0}`;
-  comboBonusEl.textContent = `+${Math.round(getComboBonus() * 100)} % coins`;
-  renderMaterials();
-  renderAchievements();
-  updateProgress();
-}
-
-function renderMaterials() {
-  materialsEl.innerHTML = Object.entries(BLOCKS).map(([id, data]) => `
-    <div class="material ${state.discovered[id] ? "discovered" : "undiscovered"}">
-      <span class="material-icon">${state.discovered[id] ? data.icon : "❔"}</span>
-      <div><div class="material-name">${state.discovered[id] ? data.name : "Neobjeveno"}</div><div class="material-count">${state.materials[id] || 0}</div></div>
-    </div>`).join("");
-}
-
-function renderAchievements() {
-  const achievements = [
-    ["first", "⛏️", "První krumpáč", "Vytěž první blok."],
-    ["diamondHunter", "💎", "Lovec diamantů", "Najdi diamant."],
-    ["emeraldHunter", "🟢", "Emerald Hunter", "Najdi smaragd."],
-    ["hundred", "💥", "100 bloků", "Vytěž 100 bloků."]
-  ];
-  achievementsEl.innerHTML = achievements.map(([id, icon, name, desc]) => `<div class="achievement ${state.achievements[id] ? "done" : ""}"><span>${state.achievements[id] ? icon : "🔒"}</span><div><strong>${name}</strong><small>${desc}</small></div></div>`).join("");
-}
-
-function updateProgress() {
-  const revealed = state.blocks.filter(block => block.revealed).length;
-  revealedValueEl.textContent = revealed;
-  progressFillEl.style.width = `${revealed / SIZE * 100}%`;
-  unlockMessageEl.textContent = state.mined < LOCK_EVERY ? `Další část se odemkne po vytěžení ${LOCK_EVERY - state.mined} bloků.` : "Těž dál a odemykej další zamčená políčka.";
-}
-
-function startGame() {
-  state.playerName = playerNameInput.value.trim() || "Miner";
-  state.pickaxeStyle = pickaxeStyleInput.value;
-  state.started = true;
-  document.getElementById("playerLabel").textContent = state.playerName;
-  lobby.classList.add("hidden");
-  game.classList.remove("hidden");
-  renderGrid(); updateUI(); saveGame();
-}
-
-function openUpdateLog() { updateLogModal.classList.remove("hidden"); }
-function closeUpdateLog() { updateLogModal.classList.add("hidden"); }
-
-let toastTimer;
-function showToast(message) {
-  clearTimeout(toastTimer);
-  toastEl.textContent = message;
-  toastEl.classList.add("show");
-  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1700);
-}
-
-startBtn.addEventListener("click", startGame);
-upgradeBtn.addEventListener("click", upgradePickaxe);
-repairBtn.addEventListener("click", repairPickaxe);
-updateLogBtn.addEventListener("click", openUpdateLog);
-closeUpdateLogBtn.addEventListener("click", closeUpdateLog);
-updateLogModal.addEventListener("click", e => { if (e.target === updateLogModal) closeUpdateLog(); });
-playerNameInput.addEventListener("keydown", e => { if (e.key === "Enter") startGame(); });
-
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeUpdateLog(); });
-
-loadGame();
-if (state.started) {
-  playerNameInput.value = state.playerName;
-  pickaxeStyleInput.value = state.pickaxeStyle || "wood";
-  document.getElementById("playerLabel").textContent = state.playerName;
-  lobby.classList.add("hidden"); game.classList.remove("hidden");
-  renderGrid(); updateUI();
-}
-
-setInterval(() => {
-  if (state.combo && Date.now() > state.comboUntil) {
-    state.combo = 0;
-    updateUI();
-  }
-  saveGame();
-}, 1000);
+function checkAchievements(){for(const a of ACH)if(!state.achievements.includes(a.id)&&a.test()){state.achievements.push(a.id);state.coins+=a.reward;showToast(`🏆 ${a.name}! +${a.reward} 💰`);}}
+function mine(index){const b=state.blocks[index];if(!b||b.locked||!b.revealed||!b.type||b.hp<=0)return;if(state.durability<=0){showToast("🪓 Krumpáč je rozbitý. Oprav ho před další těžbou.");return}b.hp=Math.max(0,b.hp-PICKAXES[state.pickaxe].damage);state.durability=Math.max(0,state.durability-1);if(b.hp<=0){const d=BLOCKS[b.type],space=addItem(b.type);state.coins+=d.reward;state.xp+=Math.round(d.xp*(1+state.xpBonus));state.mined++;revealAround(index);state.blocks[index]=randomBlock();state.blocks[index].revealed=true;state.blocks[index].locked=false;if(space===0)showToast("🎒 Inventář je plný — prodej materiály v obchodě.");else showToast(`+${d.reward} 💰  +${Math.round(d.xp*(1+state.xpBonus))} XP  ${d.icon}`);if(state.mined===20||state.mined===60)unlockAreaIfNeeded();if(state.durability===0)setTimeout(()=>showToast("🪓 Krumpáč se rozbil! Oprav ho za mince."),450);}checkAchievements();renderGrid();updateUI();saveGame()}
+function repairPickaxe(){const p=PICKAXES[state.pickaxe];if(state.durability>=p.durability)return showToast("⛏️ Krumpáč je už plně opravený.");if(state.coins<p.repairCost)return showToast(`Potřebuješ ${p.repairCost} 💰.`);state.coins-=p.repairCost;state.durability=p.durability;showToast("🔧 Krumpáč je opravený!");updateUI();saveGame()}
+function upgradePickaxe(){const i=PICKAXE_KEYS.indexOf(state.pickaxe),next=PICKAXE_KEYS[i+1];if(!next)return showToast("💎 Máš nejlepší krumpáč.");const p=PICKAXES[state.pickaxe];if(state.coins<p.upgradeCost)return showToast(`Potřebuješ ${p.upgradeCost.toLocaleString("cs-CZ")} 💰.`);state.coins-=p.upgradeCost;state.pickaxe=next;state.pickaxeStyle=next;state.durability=PICKAXES[next].durability;showToast(`⛏️ Nový krumpáč: ${PICKAXES[next].name}`);updateUI();saveGame()}
+function renderGrid(){grid.style.setProperty("--grid-size",state.mineSize);grid.innerHTML="";state.blocks.forEach((b,i)=>{if(b.locked){const e=document.createElement("div");e.className="block locked-block";e.innerHTML="<span>🔒</span>";grid.appendChild(e);return}if(!b.revealed){const e=document.createElement("div");e.className="block hidden-block";e.innerHTML='<span class="question">?</span>';grid.appendChild(e);return}const btn=document.createElement("button");btn.type="button";btn.className=`block ${b.hp<=0?"empty":BLOCKS[b.type].className}`;if(b.hp<=0){grid.appendChild(btn);return}const d=BLOCKS[b.type];btn.innerHTML=`<span class="label">${d.name}</span><span class="ore">${d.icon}</span><span class="hp"><i style="width:${Math.max(0,b.hp/b.maxHp*100)}%"></i></span>`;btn.addEventListener("click",()=>mine(i));grid.appendChild(btn)})}
+function updateInventory(){const used=inventoryUsed();$("inventoryUsed").textContent=`${used} / ${state.capacity}`;$("inventoryFill").style.width=`${Math.min(100,used/state.capacity*100)}%`;$("inventoryList").innerHTML=Object.entries(BLOCKS).filter(([id])=>(state.inventory[id]||0)>0).map(([id,d])=>`<div class="inv-row"><span>${d.icon} ${d.name}</span><strong>${state.inventory[id]}</strong></div>`).join("")||'<div class="empty-note">Inventář je zatím prázdný.</div>'}
+function updateLobby(){const li=levelInfo();$("lobbyPlayerName").textContent=state.playerName||"Miner";$("lobbyLevel").textContent=li.level;$("lobbyXpText").textContent=`${li.into} / ${li.need} XP`;$("lobbyXpFill").style.width=`${Math.min(100,li.into/li.need*100)}%`;$("lobbyCoins").textContent=state.coins.toLocaleString("cs-CZ");$("lobbyMined").textContent=state.mined.toLocaleString("cs-CZ");$("lobbyRare").textContent=Object.keys(BLOCKS).filter(id=>BLOCKS[id].rare&&state.collection.includes(id)).length;$("settingsName").value=state.playerName||"Miner"}
+function updateUI(){const p=PICKAXES[state.pickaxe],li=levelInfo();$("coins").textContent=state.coins.toLocaleString("cs-CZ");$("level").textContent=li.level;$("xp").textContent=state.xp.toLocaleString("cs-CZ");$("playerLabel").textContent=state.playerName;$("pickaxeName").textContent=p.name;$("pickaxePreview").textContent=p.icon;$("damage").textContent=p.damage;$("durability").textContent=`${state.durability} / ${p.durability}`;$("durabilityMax").textContent=p.durability;$("durabilityFill").style.width=`${state.durability/p.durability*100}%`;$("repairBtn").disabled=state.durability>=p.durability||state.coins<p.repairCost;$("repairBtn").textContent=state.durability>=p.durability?"🔧 OPRAVENO":`🔧 OPRAVIT (${p.repairCost} 💰)`;const next=PICKAXE_KEYS[PICKAXE_KEYS.indexOf(state.pickaxe)+1];$("upgradeBtn").disabled=!next||state.coins<p.upgradeCost;$("upgradeBtn").textContent=next?`VYLEPŠIT (${p.upgradeCost.toLocaleString("cs-CZ")} 💰)`:"💎 NEJLEPŠÍ KRUMPKÁČ";const rev=state.blocks.filter(b=>b.revealed).length;$("revealedValue").textContent=rev;$("totalValue").textContent=state.blocks.length;$("progressFill").style.width=`${rev/state.blocks.length*100}%`;$("unlockMessage").textContent=state.mineSize===5?`5 × 5 • ${Math.max(0,20-state.mined)} těžeb do 7 × 7.`:state.mineSize===7?`7 × 7 • ${Math.max(0,60-state.mined)} těžeb do 9 × 9.`:"9 × 9 • Největší oblast je odemčená.";updateInventory();updateLobby()}
+function startGame(){state.started=true;lobby.classList.add("hidden");game.classList.remove("hidden");renderGrid();updateUI();saveGame()}
+function backLobby(){state.started=false;game.classList.add("hidden");lobby.classList.remove("hidden");updateLobby();saveGame()}
+function openModal(id){const m=$(id);m.classList.remove("hidden");m.setAttribute("aria-hidden","false");if(id==="collectionModal")renderCollection();if(id==="achievementsModal")renderAchievements();if(id==="shopModal")renderShop()}
+function closeModal(m){m.classList.add("hidden");m.setAttribute("aria-hidden","true")}
+function renderCollection(){$("collectionGrid").innerHTML=Object.entries(BLOCKS).map(([id,d])=>{const found=state.collection.includes(id);return`<div class="collection-item ${found?"found":"locked"}"><span>${found?d.icon:"?"}</span><strong>${found?d.name:"Neobjeveno"}</strong><small>${found?`${state.inventory[id]||0} ks v inventáři`:`Vzácnost: ${d.rare?"vzácná":"běžná"}`}</small></div>`}).join("")}
+function renderAchievements(){$("achievementList").innerHTML=ACH.map(a=>{const done=state.achievements.includes(a.id);return`<div class="achievement ${done?"done":""}"><span>${done?"🏆":"🔒"}</span><div><strong>${a.name}</strong><small>${a.desc}</small></div><b>${done?"HOTOVO":`+${a.reward} 💰`}</b></div>`}).join("")}
+function renderShop(){renderSell();renderUpgrade()}
+function renderSell(){$("shopSell").innerHTML=Object.entries(BLOCKS).map(([id,d])=>{const count=state.inventory[id]||0;const price=Math.round(d.sell*(1+state.sellBonus));return`<div class="shop-item"><span class="shop-icon">${d.icon}</span><div><strong>${d.name}</strong><small>${count} ks • ${price} 💰 / kus</small></div><button class="secondary-btn sell-btn" data-sell="${id}" ${count<1?"disabled":""}>PRODAT 1</button></div>`}).join("")}
+function renderUpgrade(){$("shopUpgrade").innerHTML=`<div class="shop-item"><span class="shop-icon">🎒</span><div><strong>Větší inventář</strong><small>Kapacita ${state.capacity} → ${state.capacity+10}</small></div><button class="secondary-btn buy-upgrade" data-upgrade="capacity">${1000+state.capacity*10} 💰</button></div><div class="shop-item"><span class="shop-icon">💰</span><div><strong>Bonus prodeje</strong><small>+${Math.round(state.sellBonus*100)} % → +${Math.round((state.sellBonus+.1)*100)} %</small></div><button class="secondary-btn buy-upgrade" data-upgrade="sell">${1500+Math.round(state.sellBonus*10000)} 💰</button></div><div class="shop-item"><span class="shop-icon">⭐</span><div><strong>XP bonus</strong><small>+${Math.round(state.xpBonus*100)} % → +${Math.round((state.xpBonus+.1)*100)} %</small></div><button class="secondary-btn buy-upgrade" data-upgrade="xp">${1800+Math.round(state.xpBonus*12000)} 💰</button></div>`}
+function buyUpgrade(type){let cost;if(type==="capacity"){cost=1000+state.capacity*10;if(state.coins<cost)return showToast("Nemáš dost mincí.");state.coins-=cost;state.capacity+=10}else if(type==="sell"){cost=1500+Math.round(state.sellBonus*10000);if(state.coins<cost)return showToast("Nemáš dost mincí.");state.coins-=cost;state.sellBonus+=.1}else{cost=1800+Math.round(state.xpBonus*12000);if(state.coins<cost)return showToast("Nemáš dost mincí.");state.coins-=cost;state.xpBonus+=.1}showToast("⬆️ Upgrade zakoupen!");renderShop();updateUI();saveGame()}
+function sellItem(id){const n=state.inventory[id]||0;if(n<1)return;const d=BLOCKS[id],price=Math.round(d.sell*(1+state.sellBonus));state.inventory[id]--;state.coins+=price;showToast(`${d.icon} ${d.name} prodán za ${price} 💰`);renderShop();updateUI();saveGame()}
+function showToast(msg){clearTimeout(showToast.t);toast.textContent=msg;toast.classList.add("show");showToast.t=setTimeout(()=>toast.classList.remove("show"),1800)}
+$("startBtn").addEventListener("click",startGame);$("backLobbyBtn").addEventListener("click",backLobby);$("repairBtn").addEventListener("click",repairPickaxe);$("upgradeBtn").addEventListener("click",upgradePickaxe);$("updateLogBtn").addEventListener("click",()=>openModal("updateLogModal"));$("closeUpdateLogBtn").addEventListener("click",()=>closeModal($("updateLogModal")));$("openShopFromGame").addEventListener("click",()=>openModal("shopModal"));$("saveSettingsBtn").addEventListener("click",()=>{state.playerName=$("settingsName").value.trim()||"Miner";closeModal($("settingsModal"));updateUI();saveGame();showToast("💾 Nastavení uloženo.")});document.addEventListener("click",e=>{const menu=e.target.closest("[data-modal]");if(menu)openModal(menu.dataset.modal);const close=e.target.closest("[data-close]");if(close)closeModal(close.closest(".modal"));const sell=e.target.closest("[data-sell]");if(sell)sellItem(sell.dataset.sell);const up=e.target.closest("[data-upgrade]");if(up)buyUpgrade(up.dataset.upgrade);});document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".modal:not(.hidden)").forEach(closeModal)});document.querySelectorAll("[data-shop-tab]").forEach(tab=>tab.addEventListener("click",()=>{document.querySelectorAll("[data-shop-tab]").forEach(t=>t.classList.remove("active"));tab.classList.add("active");$("shopSell").classList.toggle("hidden",tab.dataset.shopTab!=="sell");$("shopUpgrade").classList.toggle("hidden",tab.dataset.shopTab!=="upgrade")}));
+loadGame();updateUI();setInterval(saveGame,5000);

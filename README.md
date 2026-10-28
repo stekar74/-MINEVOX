@@ -1,42 +1,21 @@
-# MINEVOX
+# MINEVOX — UPDATE 3
 
-MINEVOX je jednoduchá browserová mining hra. Tato verze obsahuje **UPDATE 2 – Živý důl**.
+Update 3 rozšiřuje MINEVOX o propracované lobby, profil, XP/level, inventář, prodej materiálů a ekonomické upgrady. Update 2 zůstává zachovaný.
 
-## Struktura
-
-```text
-minevox/
-├── index.html
-├── style.css
-├── script.js
-├── README.md
-└── assets/
-    └── favicon.ico
-```
+## Soubory
+- `index.html` — herní rozhraní a lobby
+- `style.css` — kompletní vzhled
+- `script.js` — těžba, save systém, XP, inventář, obchod a lobby
+- `assets/favicon.ico` — favicon
 
 ## Spuštění
+Otevři `index.html` v moderním prohlížeči. Hra používá `localStorage`, takže postup zůstává uložený v tomto prohlížeči.
 
-Otevři `index.html` v moderním webovém prohlížeči. Není potřeba server ani instalace balíčků.
-
-## UPDATE 2 – Živý důl
-
-- 🪓 krumpáče mají výdrž a mohou se rozbít
-- 🔧 krumpáče lze opravovat za mince
-- ❓ bloky se postupně odhalují
-- 🔒 zamčená políčka se odemykají postupně, po 20 vytěžených blocích
-- 💎 přidány nové rudy: Měď, Lapis, Smaragd a Rubín
-- 🎁 přidány náhodné Treasure Blocky
-- 💥 přidáno COMBO s bonusem k mincím
-- 🪙 první objevení každé rudy dává bonus
-- 📖 přidána Collection materiálů
-- 🏆 přidány achievementy
-- 📜 přidán trvalý Update Log, který lze kdykoli otevřít
-- 💾 automatické ukládání pokračuje přes `localStorage`
-
-## Hlavní herní smyčka
-
-**Klikni → vytěž → opotřebuj krumpáč → odhal okolí → najdi rudu nebo poklad → vydělej mince → oprav nebo vylepši krumpáč → odemykej další část dolu.**
-
-## Poznámka k updatu
-
-Hra zůstává čistě klikací. Není zde postava, WASD ani pohyb po mapě.
+## Update 3
+- Hráč vždy začne v lobby.
+- Postup se automaticky ukládá přibližně každých 5 sekund a také po důležitých akcích.
+- XP a level rostou těžením.
+- Vytěžené materiály se ukládají do inventáře.
+- Materiály lze prodávat v obchodě.
+- V obchodě lze zvětšit inventář a získat bonus k prodeji a XP.
+- Lobby obsahuje kolekci, achievementy, obchod a nastavení.
